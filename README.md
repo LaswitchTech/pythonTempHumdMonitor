@@ -24,6 +24,8 @@ Using Bash:
 ```sh
 git clone https://github.com/LaswitchTech/pythonTempHumdMonitor
 cd pythonTempHumdMonitor
+chmod +x *.sh
+chmod +x *.py
 ./install.sh
 ```
 

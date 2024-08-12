@@ -6,19 +6,19 @@ import sys
 import time
 import json
 import argparse
+import datetime
 import subprocess
-
-# # Activate the virtual environment
-# venv_path = os.path.join(os.path.dirname(__file__), '.env', 'bin', 'activate')
-#
-# if os.path.exists(venv_path):
-#     with open(venv_path) as f:
-#         exec(f.read(), {'__file__': venv_path})
 
 # Adafruit Libraries
 import adafruit_sht31d
 import board
 import busio
+
+# SMTP Libraries
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate
 
 # MySQL Libraries
 import mysql.connector
@@ -32,9 +32,18 @@ sensor = adafruit_sht31d.SHT31D(i2c)
 default_config = {
     "db_host": "localhost",
     "db_name": "sensor_data",
-    "db_user": "sensor_user",
+    "db_username": "sensor_user",
     "db_password": "",
-    "frequency": 60
+    "frequency": 60,
+    "smtp_server": "smtp.example.com",
+    "smtp_port": 587,
+    "smtp_username": "user@example.com",
+    "smtp_password": "",
+    "recipient": "alert@example.com",
+    "temp_threshold_high": 27,
+    "temp_threshold_low": 18,
+    "humidity_threshold_high": 80,
+    "humidity_threshold_low": 20
 }
 
 config_file = "config.cfg"
@@ -54,9 +63,18 @@ def configure():
     config = load_config()
     config['db_host'] = input(f"Database Host (current: {config['db_host']}): ") or config['db_host']
     config['db_name'] = input(f"Database Name (current: {config['db_name']}): ") or config['db_name']
-    config['db_user'] = input(f"Database Username (current: {config['db_user']}): ") or config['db_user']
+    config['db_username'] = input(f"Database Username (current: {config['db_username']}): ") or config['db_username']
     config['db_password'] = input("Database Password: ") or config['db_password']
     config['frequency'] = int(input(f"Frequency in seconds (current: {config['frequency']}): ") or config['frequency'])
+    config['smtp_server'] = input(f"SMTP Server (current: {config['smtp_server']}): ") or config['smtp_server']
+    config['smtp_port'] = int(input(f"SMTP Port (current: {config['smtp_port']}): ") or config['smtp_port'])
+    config['smtp_username'] = input(f"SMTP Username (current: {config['smtp_username']}): ") or config['smtp_username']
+    config['smtp_password'] = input("SMTP Password: ") or config['smtp_password']
+    config['recipient'] = input(f"Recipient (current: {config['recipient']}): ") or config['recipient']
+    config['temp_threshold_high'] = float(input(f"High Temperature Threshold (current: {config['temp_threshold_high']}): ") or config['temp_threshold_high'])
+    config['temp_threshold_low'] = float(input(f"Low Temperature Threshold (current: {config['temp_threshold_low']}): ") or config['temp_threshold_low'])
+    config['humidity_threshold_high'] = float(input(f"High Humidity Threshold (current: {config['humidity_threshold_high']}): ") or config['humidity_threshold_high'])
+    config['humidity_threshold_low'] = float(input(f"Low Humidity Threshold (current: {config['humidity_threshold_low']}): ") or config['humidity_threshold_low'])
     save_config(config)
     print("Configuration saved.")
 
@@ -64,7 +82,7 @@ def log_data(temperature, humidity, config):
     try:
         connection = mysql.connector.connect(
             host=config['db_host'],
-            user=config['db_user'],
+            user=config['db_username'],
             password=config['db_password'],
             database=config['db_name']
         )
@@ -82,12 +100,34 @@ def log_data(temperature, humidity, config):
         if connection.is_connected():
             connection.close()
 
+# Function to send an email
+def send_email(subject, body, config):
+    msg = MIMEMultipart()
+    msg['From'] = config['smtp_username']
+    msg['To'] = config['recipient']
+    msg['Subject'] = subject
+    msg['Date'] = formatdate(localtime=True)  # Adding Date header
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
+        server.starttls()
+        server.login(config['smtp_username'], config['smtp_password'])
+        text = msg.as_string()
+        server.sendmail(config['smtp_username'], config['recipient'], text)
+        server.quit()
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
 def read_sensor():
     temperature = sensor.temperature
     humidity = sensor.relative_humidity
     return temperature, humidity
 
 def create_service(script_path):
+    script_dir = os.path.dirname(script_path)
     venv_path = os.path.abspath('.env/bin/activate')
     service_content = f"""
     [Unit]
@@ -96,6 +136,7 @@ def create_service(script_path):
 
     [Service]
     Type=simple
+    WorkingDirectory={script_dir}
     ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_path}'
     Restart=on-failure
     User={os.getlogin()}
@@ -168,10 +209,28 @@ if __name__ == "__main__":
         else:
             def process_reading():
                 temp, hum = read_sensor()
+
                 if args.verbose:
                     print(f"Temperature: {temp} C, Humidity: {hum} %")
+
                 if not args.console:
                     log_data(temp, hum, config)
+
+                # Check temperature thresholds
+                if temp > config['temp_threshold_high'] or temp < config['temp_threshold_low']:
+                    send_email(
+                        subject="Temperature Alert",
+                        body=f"Temperature out of range: {temp} C",
+                        config=config
+                    )
+
+                # Check humidity thresholds
+                if hum > config['humidity_threshold_high'] or hum < config['humidity_threshold_low']:
+                    send_email(
+                        subject="Humidity Alert",
+                        body=f"Humidity out of range: {hum} %",
+                        config=config
+                    )
 
             if args.once:
                 process_reading()

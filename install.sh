@@ -1,15 +1,101 @@
 #!/bin/bash
 
+# Function to check if MariaDB is installed
+is_mariadb_installed() {
+  if dpkg -l | grep -q mariadb-server; then
+    echo "MariaDB is already installed."
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Function to check if the database and table exist
+is_database_configured() {
+  DB_EXISTS=$(sudo mariadb -u root -e "SHOW DATABASES LIKE 'sensor_data';" | grep "sensor_data" > /dev/null; echo "$?")
+  if [ "$DB_EXISTS" -eq 0 ]; then
+    echo "Database 'sensor_data' already exists."
+    TABLE_EXISTS=$(sudo mariadb -u root -e "USE sensor_data; SHOW TABLES LIKE 'readings';" | grep "readings" > /dev/null; echo "$?")
+    if [ "$TABLE_EXISTS" -eq 0 ]; then
+      echo "Table 'readings' already exists."
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+# Function to check if the virtual environment exists
+is_venv_exists() {
+  if [ -d ".env" ]; then
+    echo "Python virtual environment already exists."
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Function to check if the configuration file exists
+is_config_exists() {
+  config_file="config.cfg"
+  if [ -f "${config_file}" ]; then
+    echo "Configuration file already exists."
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Function to prompt the user for MariaDB installation
 prompt_mariadb_installation() {
-  read -p "Do you want to install MariaDB on this Raspberry Pi? (y/n): " install_mariadb
-  echo
+  if ! is_mariadb_installed; then
+    read -p "Do you want to install MariaDB on this Raspberry Pi? (y/n): " install_mariadb
+    echo
+  else
+    install_mariadb="n"
+  fi
 }
 
 # Function to prompt the user for the MariaDB password
 prompt_mariadb_password() {
   read -sp "Please specify the password to be used for the MariaDB user 'sensor_user': " password_mariadb
   echo
+}
+
+# Function to prompt the user for SMTP configuration
+prompt_smtp_configuration() {
+  if ! is_config_exists; then
+    read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_host
+    smtp_host=${smtp_host:-"smtp.example.com"}
+
+    read -p "Please specify the SMTP port (default: 587): " smtp_port
+    smtp_port=${smtp_port:-587}
+
+    read -p "Please specify the SMTP username: " smtp_username
+    read -sp "Please specify the SMTP password: " smtp_password
+    echo
+
+    read -p "Please specify the email address to send alerts to: " recipient
+  fi
+}
+
+# Function to prompt the user for threshold settings
+prompt_thresholds() {
+  if ! is_config_exists; then
+    read -p "Please specify the high temperature threshold (default: 27): " temp_threshold_high
+    temp_threshold_high=${temp_threshold_high:-27}
+
+    read -p "Please specify the low temperature threshold (default: 18): " temp_threshold_low
+    temp_threshold_low=${temp_threshold_low:-18}
+
+    read -p "Please specify the high humidity threshold (default: 80): " humidity_threshold_high
+    humidity_threshold_high=${humidity_threshold_high:-80}
+
+    read -p "Please specify the low humidity threshold (default: 20): " humidity_threshold_low
+    humidity_threshold_low=${humidity_threshold_low:-20}
+  fi
 }
 
 # Function to update the system
@@ -35,25 +121,34 @@ install_dependencies() {
   # Automatically enable I2C without user interaction
   sudo raspi-config nonint do_i2c 0
 
-  # Create a Python virtual environment
-  python3 -m venv .env
-  source .env/bin/activate
+  # Create a Python virtual environment if it doesn't exist
+  if ! is_venv_exists; then
+    python3 -m venv .env
+    source .env/bin/activate
 
-  # Install python3 libraries within the virtual environment
-  pip3 install adafruit-circuitpython-sht31d
-  pip3 install mysql-connector-python
-  deactivate
+    # Install python3 libraries within the virtual environment
+    pip3 install adafruit-circuitpython-sht31d
+    pip3 install mysql-connector-python
+    deactivate
 
-  echo "Dependencies installation completed."
+    echo "Dependencies installation completed."
+  else
+    echo "Skipping virtual environment setup as it already exists."
+  fi
 }
 
 # Function to install MariaDB
 install_mariadb() {
-  sudo apt-get install -y mariadb-server
-  sudo mysql_secure_installation
+  if ! is_mariadb_installed; then
+    sudo apt-get install -y mariadb-server
+    sudo mysql_secure_installation
+  else
+    echo "Skipping MariaDB installation as it is already installed."
+  fi
 
-  # Automate database setup
-  sudo mariadb -u root <<EOF
+  # Automate database setup if it doesn't exist
+  if ! is_database_configured; then
+    sudo mariadb -u root <<EOF
 CREATE DATABASE sensor_data;
 CREATE USER 'sensor_user'@'localhost' IDENTIFIED BY '$password_mariadb';
 GRANT ALL PRIVILEGES ON sensor_data.* TO 'sensor_user'@'localhost';
@@ -66,8 +161,11 @@ CREATE TABLE readings (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 EOF
-
-  sudo systemctl enable mariadb
+    sudo systemctl enable mariadb
+    echo "Database and table created successfully."
+  else
+    echo "Skipping database and table creation as they already exist."
+  fi
 }
 
 # Function to create the configuration file
@@ -79,9 +177,18 @@ create_config_file() {
 {
     "db_host": "localhost",
     "db_name": "sensor_data",
-    "db_user": "sensor_user",
+    "db_username": "sensor_user",
     "db_password": "$password_mariadb",
-    "frequency": 60
+    "frequency": 60,
+    "smtp_host": "$smtp_host",
+    "smtp_port": $smtp_port,
+    "smtp_username": "$smtp_username",
+    "smtp_password": "$smtp_password",
+    "recipient": "$recipient",
+    "temp_threshold_high": $temp_threshold_high,
+    "temp_threshold_low": $temp_threshold_low,
+    "humidity_threshold_high": $humidity_threshold_high,
+    "humidity_threshold_low": $humidity_threshold_low
 }
 EOF
     echo "Configuration file created."
@@ -95,6 +202,8 @@ update_system
 install_dependencies
 prompt_mariadb_installation
 prompt_mariadb_password
+prompt_smtp_configuration
+prompt_thresholds
 create_config_file
 
 if [ "$install_mariadb" == "y" ]; then
