@@ -161,11 +161,11 @@ def create_service():
     [Install]
     WantedBy=multi-user.target
     """
-    service_file_path = '/etc/systemd/system/{service_name}.service'
+    service_file_path = f'/etc/systemd/system/{service_name}.service'
 
     try:
         # Write the service file using sudo
-        with open('/tmp/{service_name}.service', 'w') as service_file:
+        with open(f'/tmp/{service_name}.service', 'w') as service_file:
             service_file.write(service_content)
 
         subprocess.run(['sudo', 'mv', f'/tmp/{service_name}.service', service_file_path], check=True)
