@@ -53,6 +53,36 @@ prompt_mariadb_password() {
   echo
 }
 
+# Function to prompt the user for SMTP configuration
+prompt_smtp_configuration() {
+  read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_server
+  smtp_server=${smtp_server:-"smtp.example.com"}
+
+  read -p "Please specify the SMTP port (default: 587): " smtp_port
+  smtp_port=${smtp_port:-587}
+
+  read -p "Please specify the SMTP username: " smtp_user
+  read -sp "Please specify the SMTP password: " smtp_password
+  echo
+
+  read -p "Please specify the email address to send alerts to: " email_to
+}
+
+# Function to prompt the user for threshold settings
+prompt_thresholds() {
+  read -p "Please specify the high temperature threshold (default: 24): " temp_threshold_high
+  temp_threshold_high=${temp_threshold_high:-24}
+
+  read -p "Please specify the low temperature threshold (default: 5): " temp_threshold_low
+  temp_threshold_low=${temp_threshold_low:-5}
+
+  read -p "Please specify the high humidity threshold (default: 60): " humidity_threshold_high
+  humidity_threshold_high=${humidity_threshold_high:-60}
+
+  read -p "Please specify the low humidity threshold (default: 25): " humidity_threshold_low
+  humidity_threshold_low=${humidity_threshold_low:-25}
+}
+
 # Function to update the system
 update_system() {
   echo "Updating the system..."
@@ -134,7 +164,16 @@ create_config_file() {
     "db_name": "sensor_data",
     "db_user": "sensor_user",
     "db_password": "$password_mariadb",
-    "frequency": 60
+    "frequency": 60,
+    "smtp_server": "$smtp_server",
+    "smtp_port": $smtp_port,
+    "smtp_user": "$smtp_user",
+    "smtp_password": "$smtp_password",
+    "email_to": "$email_to",
+    "temp_threshold_high": $temp_threshold_high,
+    "temp_threshold_low": $temp_threshold_low,
+    "humidity_threshold_high": $humidity_threshold_high,
+    "humidity_threshold_low": $humidity_threshold_low
 }
 EOF
     echo "Configuration file created."
@@ -148,6 +187,8 @@ update_system
 install_dependencies
 prompt_mariadb_installation
 prompt_mariadb_password
+prompt_smtp_configuration
+prompt_thresholds
 create_config_file
 
 if [ "$install_mariadb" == "y" ]; then
