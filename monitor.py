@@ -194,7 +194,7 @@ def remove_service():
 
 def start_service():
     if is_service_installed():
-        subprocess.run(['sudo', 'systemctl', 'start', 'network_logger.service'])
+        subprocess.run(['sudo', 'systemctl', 'start', f'{service_name}.service'])
         if args.verbose:
             print("Service started.")
     else:
@@ -203,7 +203,7 @@ def start_service():
 
 def stop_service():
     if is_service_installed():
-        subprocess.run(['sudo', 'systemctl', 'stop', 'network_logger.service'])
+        subprocess.run(['sudo', 'systemctl', 'stop', f'{service_name}.service'])
         if args.verbose:
             print("Service stopped.")
     else:
