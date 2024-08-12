@@ -7,13 +7,14 @@
 ![Version](https://img.shields.io/github/v/release/LaswitchTech/pythonTempHumdMonitor?label=Version&style=for-the-badge)
 
 ## Description
-This python application is used to monitor temperatures and humidity levels.
+This python application is used to monitor temperatures and humidity levels. You can also setup thresholds and a SMTP server to receive alerts.
 
 ## License
 This software is distributed under the [MIT](LICENSE) license.
 
 ## Requirements
 * Python 3
+* SMTP Server
 * MariaDB Server
 
 ## Security
