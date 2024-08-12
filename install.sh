@@ -39,8 +39,12 @@ is_venv_exists() {
 
 # Function to prompt the user for MariaDB installation
 prompt_mariadb_installation() {
-  read -p "Do you want to install MariaDB on this Raspberry Pi? (y/n): " install_mariadb
-  echo
+  if ! is_mariadb_installed; then
+    read -p "Do you want to install MariaDB on this Raspberry Pi? (y/n): " install_mariadb
+    echo
+  else
+    install_mariadb="n"
+  fi
 }
 
 # Function to prompt the user for the MariaDB password
@@ -72,25 +76,34 @@ install_dependencies() {
   # Automatically enable I2C without user interaction
   sudo raspi-config nonint do_i2c 0
 
-  # Create a Python virtual environment
-  python3 -m venv .env
-  source .env/bin/activate
+  # Create a Python virtual environment if it doesn't exist
+  if ! is_venv_exists; then
+    python3 -m venv .env
+    source .env/bin/activate
 
-  # Install python3 libraries within the virtual environment
-  pip3 install adafruit-circuitpython-sht31d
-  pip3 install mysql-connector-python
-  deactivate
+    # Install python3 libraries within the virtual environment
+    pip3 install adafruit-circuitpython-sht31d
+    pip3 install mysql-connector-python
+    deactivate
 
-  echo "Dependencies installation completed."
+    echo "Dependencies installation completed."
+  else
+    echo "Skipping virtual environment setup as it already exists."
+  fi
 }
 
 # Function to install MariaDB
 install_mariadb() {
-  sudo apt-get install -y mariadb-server
-  sudo mysql_secure_installation
+  if ! is_mariadb_installed; then
+    sudo apt-get install -y mariadb-server
+    sudo mysql_secure_installation
+  else
+    echo "Skipping MariaDB installation as it is already installed."
+  fi
 
-  # Automate database setup
-  sudo mariadb -u root <<EOF
+  # Automate database setup if it doesn't exist
+  if ! is_database_configured; then
+    sudo mariadb -u root <<EOF
 CREATE DATABASE sensor_data;
 CREATE USER 'sensor_user'@'localhost' IDENTIFIED BY '$password_mariadb';
 GRANT ALL PRIVILEGES ON sensor_data.* TO 'sensor_user'@'localhost';
@@ -103,8 +116,11 @@ CREATE TABLE readings (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 EOF
-
-  sudo systemctl enable mariadb
+    sudo systemctl enable mariadb
+    echo "Database and table created successfully."
+  else
+    echo "Skipping database and table creation as they already exist."
+  fi
 }
 
 # Function to create the configuration file
