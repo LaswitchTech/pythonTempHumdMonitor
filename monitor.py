@@ -32,7 +32,7 @@ sensor = adafruit_sht31d.SHT31D(i2c)
 default_config = {
     "db_host": "localhost",
     "db_name": "sensor_data",
-    "db_user": "sensor_user",
+    "db_username": "sensor_user",
     "db_password": "",
     "frequency": 60,
     "smtp_server": "smtp.example.com",
@@ -63,7 +63,7 @@ def configure():
     config = load_config()
     config['db_host'] = input(f"Database Host (current: {config['db_host']}): ") or config['db_host']
     config['db_name'] = input(f"Database Name (current: {config['db_name']}): ") or config['db_name']
-    config['db_user'] = input(f"Database Username (current: {config['db_user']}): ") or config['db_user']
+    config['db_username'] = input(f"Database Username (current: {config['db_username']}): ") or config['db_username']
     config['db_password'] = input("Database Password: ") or config['db_password']
     config['frequency'] = int(input(f"Frequency in seconds (current: {config['frequency']}): ") or config['frequency'])
     config['smtp_server'] = input(f"SMTP Server (current: {config['smtp_server']}): ") or config['smtp_server']
@@ -82,7 +82,7 @@ def log_data(temperature, humidity, config):
     try:
         connection = mysql.connector.connect(
             host=config['db_host'],
-            user=config['db_user'],
+            user=config['db_username'],
             password=config['db_password'],
             database=config['db_name']
         )

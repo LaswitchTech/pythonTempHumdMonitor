@@ -37,6 +37,17 @@ is_venv_exists() {
   fi
 }
 
+# Function to check if the configuration file exists
+is_config_exists() {
+  config_file="config.cfg"
+  if [ -f "${config_file}" ]; then
+    echo "Configuration file already exists."
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Function to prompt the user for MariaDB installation
 prompt_mariadb_installation() {
   if ! is_mariadb_installed; then
@@ -55,32 +66,36 @@ prompt_mariadb_password() {
 
 # Function to prompt the user for SMTP configuration
 prompt_smtp_configuration() {
-  read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_server
-  smtp_server=${smtp_server:-"smtp.example.com"}
+  if ! is_config_exists; then
+    read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_server
+    smtp_server=${smtp_server:-"smtp.example.com"}
 
-  read -p "Please specify the SMTP port (default: 587): " smtp_port
-  smtp_port=${smtp_port:-587}
+    read -p "Please specify the SMTP port (default: 587): " smtp_port
+    smtp_port=${smtp_port:-587}
 
-  read -p "Please specify the SMTP username: " smtp_username
-  read -sp "Please specify the SMTP password: " smtp_password
-  echo
+    read -p "Please specify the SMTP username: " smtp_username
+    read -sp "Please specify the SMTP password: " smtp_password
+    echo
 
-  read -p "Please specify the email address to send alerts to: " recipient
+    read -p "Please specify the email address to send alerts to: " recipient
+  fi
 }
 
 # Function to prompt the user for threshold settings
 prompt_thresholds() {
-  read -p "Please specify the high temperature threshold (default: 27): " temp_threshold_high
-  temp_threshold_high=${temp_threshold_high:-27}
+  if ! is_config_exists; then
+    read -p "Please specify the high temperature threshold (default: 27): " temp_threshold_high
+    temp_threshold_high=${temp_threshold_high:-27}
 
-  read -p "Please specify the low temperature threshold (default: 18): " temp_threshold_low
-  temp_threshold_low=${temp_threshold_low:-18}
+    read -p "Please specify the low temperature threshold (default: 18): " temp_threshold_low
+    temp_threshold_low=${temp_threshold_low:-18}
 
-  read -p "Please specify the high humidity threshold (default: 80): " humidity_threshold_high
-  humidity_threshold_high=${humidity_threshold_high:-80}
+    read -p "Please specify the high humidity threshold (default: 80): " humidity_threshold_high
+    humidity_threshold_high=${humidity_threshold_high:-80}
 
-  read -p "Please specify the low humidity threshold (default: 20): " humidity_threshold_low
-  humidity_threshold_low=${humidity_threshold_low:-20}
+    read -p "Please specify the low humidity threshold (default: 20): " humidity_threshold_low
+    humidity_threshold_low=${humidity_threshold_low:-20}
+  fi
 }
 
 # Function to update the system
@@ -162,7 +177,7 @@ create_config_file() {
 {
     "db_host": "localhost",
     "db_name": "sensor_data",
-    "db_user": "sensor_user",
+    "db_username": "sensor_user",
     "db_password": "$password_mariadb",
     "frequency": 60,
     "smtp_server": "$smtp_server",
