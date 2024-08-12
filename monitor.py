@@ -9,13 +9,6 @@ import argparse
 import datetime
 import subprocess
 
-# # Activate the virtual environment
-# venv_path = os.path.join(os.path.dirname(__file__), '.env', 'bin', 'activate')
-#
-# if os.path.exists(venv_path):
-#     with open(venv_path) as f:
-#         exec(f.read(), {'__file__': venv_path})
-
 # Adafruit Libraries
 import adafruit_sht31d
 import board
