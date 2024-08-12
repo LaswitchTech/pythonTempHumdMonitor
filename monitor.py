@@ -207,49 +207,38 @@ if __name__ == "__main__":
         elif args.uninstall:
             remove_service()
         else:
-            def process_reading():
-                temp, hum = read_sensor()
+            try:
+                def process_reading():
+                    temp, hum = read_sensor()
 
-                if args.verbose:
-                    print(f"Temperature: {temp} C, Humidity: {hum} %")
+                    if args.verbose:
+                        print(f"Temperature: {temp} C, Humidity: {hum} %")
 
-                if not args.console:
-                    log_data(temp, hum, config)
+                    if not args.console:
+                        log_data(temp, hum, config)
 
-                # Check temperature thresholds
-                if temp > config['temp_threshold_high'] or temp < config['temp_threshold_low']:
-                    send_email(
-                        subject="Temperature Alert",
-                        body=f"Temperature out of range: {temp} C",
-                        config=config
-                    )
+                    # Check temperature thresholds
+                    if temp > config['temp_threshold_high'] or temp < config['temp_threshold_low']:
+                        send_email(
+                            subject="Temperature Alert",
+                            body=f"Temperature out of range: {temp} C",
+                            config=config
+                        )
 
-                # Check humidity thresholds
-                if hum > config['humidity_threshold_high'] or hum < config['humidity_threshold_low']:
-                    send_email(
-                        subject="Humidity Alert",
-                        body=f"Humidity out of range: {hum} %",
-                        config=config
-                    )
+                    # Check humidity thresholds
+                    if hum > config['humidity_threshold_high'] or hum < config['humidity_threshold_low']:
+                        send_email(
+                            subject="Humidity Alert",
+                            body=f"Humidity out of range: {hum} %",
+                            config=config
+                        )
 
-            if args.once:
-                process_reading()
-                print("Completed a single reading.")
-            else:
-                try:
-                    def process_reading():
-                        temp, hum = read_sensor()
-                        if args.verbose:
-                            print(f"Temperature: {temp} C, Humidity: {hum} %")
-                        if not args.console:
-                            log_data(temp, hum, config)
-
-                    if args.once:
+                if args.once:
+                    process_reading()
+                    print("Completed a single reading.")
+                else:
+                    while True:
                         process_reading()
-                        print("Completed a single reading.")
-                    else:
-                        while True:
-                            process_reading()
-                            time.sleep(config['frequency'])  # Wait for the configured frequency
-                except KeyboardInterrupt:
-                    print("\nStopping...")
+                        time.sleep(config['frequency'])  # Wait for the configured frequency
+            except KeyboardInterrupt:
+                print("\nStopping...")
