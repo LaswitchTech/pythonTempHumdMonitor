@@ -61,26 +61,26 @@ prompt_smtp_configuration() {
   read -p "Please specify the SMTP port (default: 587): " smtp_port
   smtp_port=${smtp_port:-587}
 
-  read -p "Please specify the SMTP username: " smtp_user
+  read -p "Please specify the SMTP username: " smtp_username
   read -sp "Please specify the SMTP password: " smtp_password
   echo
 
-  read -p "Please specify the email address to send alerts to: " email_to
+  read -p "Please specify the email address to send alerts to: " recipient
 }
 
 # Function to prompt the user for threshold settings
 prompt_thresholds() {
-  read -p "Please specify the high temperature threshold (default: 24): " temp_threshold_high
-  temp_threshold_high=${temp_threshold_high:-24}
+  read -p "Please specify the high temperature threshold (default: 27): " temp_threshold_high
+  temp_threshold_high=${temp_threshold_high:-27}
 
-  read -p "Please specify the low temperature threshold (default: 5): " temp_threshold_low
-  temp_threshold_low=${temp_threshold_low:-5}
+  read -p "Please specify the low temperature threshold (default: 18): " temp_threshold_low
+  temp_threshold_low=${temp_threshold_low:-18}
 
-  read -p "Please specify the high humidity threshold (default: 60): " humidity_threshold_high
-  humidity_threshold_high=${humidity_threshold_high:-60}
+  read -p "Please specify the high humidity threshold (default: 80): " humidity_threshold_high
+  humidity_threshold_high=${humidity_threshold_high:-80}
 
-  read -p "Please specify the low humidity threshold (default: 25): " humidity_threshold_low
-  humidity_threshold_low=${humidity_threshold_low:-25}
+  read -p "Please specify the low humidity threshold (default: 20): " humidity_threshold_low
+  humidity_threshold_low=${humidity_threshold_low:-20}
 }
 
 # Function to update the system
@@ -167,9 +167,9 @@ create_config_file() {
     "frequency": 60,
     "smtp_server": "$smtp_server",
     "smtp_port": $smtp_port,
-    "smtp_user": "$smtp_user",
+    "smtp_username": "$smtp_username",
     "smtp_password": "$smtp_password",
-    "email_to": "$email_to",
+    "recipient": "$recipient",
     "temp_threshold_high": $temp_threshold_high,
     "temp_threshold_low": $temp_threshold_low,
     "humidity_threshold_high": $humidity_threshold_high,
