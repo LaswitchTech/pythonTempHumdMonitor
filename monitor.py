@@ -154,7 +154,7 @@ def create_service():
     [Service]
     Type=simple
     WorkingDirectory={script_dir}
-    ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_dir}'
+    ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_dir}/monitor.py'
     Restart=on-failure
     User={os.getlogin()}
 
