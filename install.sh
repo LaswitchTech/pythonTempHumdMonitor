@@ -67,8 +67,8 @@ prompt_mariadb_password() {
 # Function to prompt the user for SMTP configuration
 prompt_smtp_configuration() {
   if ! is_config_exists; then
-    read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_server
-    smtp_server=${smtp_server:-"smtp.example.com"}
+    read -p "Please specify the SMTP server (default: smtp.example.com): " smtp_host
+    smtp_host=${smtp_host:-"smtp.example.com"}
 
     read -p "Please specify the SMTP port (default: 587): " smtp_port
     smtp_port=${smtp_port:-587}
@@ -180,7 +180,7 @@ create_config_file() {
     "db_username": "sensor_user",
     "db_password": "$password_mariadb",
     "frequency": 60,
-    "smtp_server": "$smtp_server",
+    "smtp_host": "$smtp_host",
     "smtp_port": $smtp_port,
     "smtp_username": "$smtp_username",
     "smtp_password": "$smtp_password",
