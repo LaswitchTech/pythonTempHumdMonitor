@@ -88,6 +88,7 @@ def read_sensor():
     return temperature, humidity
 
 def create_service(script_path):
+    script_dir = os.path.dirname(script_path)
     venv_path = os.path.abspath('.env/bin/activate')
     service_content = f"""
     [Unit]
@@ -96,6 +97,7 @@ def create_service(script_path):
 
     [Service]
     Type=simple
+    WorkingDirectory={script_dir}
     ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_path}'
     Restart=on-failure
     User={os.getlogin()}
