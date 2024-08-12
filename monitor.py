@@ -46,18 +46,31 @@ default_config = {
     "humidity_threshold_low": 20
 }
 
-config_file = "config.cfg"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+venv_path = os.path.join(script_dir, ".env/bin/activate")
+config_file = os.path.join(script_dir, "config.cfg")
+service_name = "sht30_logger"
+
+def is_service_installed():
+    result = subprocess.run(['systemctl', 'list-units', '--type=service', '--all'], stdout=subprocess.PIPE)
+    return f'{service_name}.service' in result.stdout.decode()
 
 def load_config():
     if os.path.exists(config_file):
         with open(config_file, 'r') as f:
-            return json.load(f)
+            config = json.load(f)
+            for key in default_config:
+                if key not in config:
+                    config[key] = default_config[key]
+            return config
     else:
         return default_config
 
 def save_config(config):
     with open(config_file, 'w') as f:
         json.dump(config, f, indent=4)
+    if args.verbose:
+        print("Configuration saved.")
 
 def configure():
     config = load_config()
@@ -76,7 +89,12 @@ def configure():
     config['humidity_threshold_high'] = float(input(f"High Humidity Threshold (current: {config['humidity_threshold_high']}): ") or config['humidity_threshold_high'])
     config['humidity_threshold_low'] = float(input(f"Low Humidity Threshold (current: {config['humidity_threshold_low']}): ") or config['humidity_threshold_low'])
     save_config(config)
-    print("Configuration saved.")
+    if args.verbose:
+        print("Configuration saved.")
+
+def log_error(message):
+    with open(os.path.join(script_dir, 'error.log'), 'a') as f:
+        f.write(f"{datetime.datetime.now()} - {message}\n")
 
 def log_data(temperature, humidity, config):
     try:
@@ -95,9 +113,12 @@ def log_data(temperature, humidity, config):
             cursor.close()
 
     except Error as e:
-        print(f"Error: {e}")
+        log_error(f"Database error: {e}")
+        if args.verbose:
+            print(f"Error: {e}")
     finally:
         if connection.is_connected():
+            cursor.close()
             connection.close()
 
 # Function to send an email
@@ -117,18 +138,14 @@ def send_email(subject, body, config):
         text = msg.as_string()
         server.sendmail(config['smtp_username'], config['recipient'], text)
         server.quit()
-        print("Email sent successfully!")
+        if args.verbose:
+            print("Email sent successfully!")
     except Exception as e:
-        print(f"Failed to send email: {e}")
+        log_error(f"Failed to send email: {e}")
+        if args.verbose:
+            print(f"Failed to send email: {e}")
 
-def read_sensor():
-    temperature = sensor.temperature
-    humidity = sensor.relative_humidity
-    return temperature, humidity
-
-def create_service(script_path):
-    script_dir = os.path.dirname(script_path)
-    venv_path = os.path.abspath('.env/bin/activate')
+def create_service():
     service_content = f"""
     [Unit]
     Description=SHT30 Sensor Data Logger Service
@@ -137,35 +154,66 @@ def create_service(script_path):
     [Service]
     Type=simple
     WorkingDirectory={script_dir}
-    ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_path}'
+    ExecStart=/bin/bash -c 'source {venv_path} && python3 {script_dir}'
     Restart=on-failure
     User={os.getlogin()}
 
     [Install]
     WantedBy=multi-user.target
     """
-    service_file_path = '/etc/systemd/system/sht30_logger.service'
+    service_file_path = f'/etc/systemd/system/{service_name}.service'
 
     try:
         # Write the service file using sudo
-        with open('/tmp/sht30_logger.service', 'w') as service_file:
+        with open(f'/tmp/{service_name}.service', 'w') as service_file:
             service_file.write(service_content)
 
-        subprocess.run(['sudo', 'mv', '/tmp/sht30_logger.service', service_file_path], check=True)
+        subprocess.run(['sudo', 'mv', f'/tmp/{service_name}.service', service_file_path], check=True)
         subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
-        subprocess.run(['sudo', 'systemctl', 'enable', 'sht30_logger.service'], check=True)
-        subprocess.run(['sudo', 'systemctl', 'start', 'sht30_logger.service'], check=True)
-        print("Service installed, enabled and started.")
+        subprocess.run(['sudo', 'systemctl', 'enable', f'{service_name}.service'], check=True)
+        subprocess.run(['sudo', 'systemctl', 'start', f'{service_name}.service'], check=True)
+        if args.verbose:
+            print("Service installed, enabled and started.")
     except Exception as e:
-        print(f"Failed to install service: {e}")
+        log_error(f"Failed to install service: {e}")
+        if args.verbose:
+            print(f"Failed to install service: {e}")
         sys.exit(1)
 
 def remove_service():
-    os.system('sudo systemctl stop sht30_logger.service')
-    os.system('sudo systemctl disable sht30_logger.service')
-    os.system('sudo rm /etc/systemd/system/sht30_logger.service')
-    os.system('sudo systemctl daemon-reload')
-    print("Service removed.")
+    if is_service_installed():
+        os.system(f'sudo systemctl stop {service_name}.service')
+        os.system(f'sudo systemctl disable {service_name}.service')
+        os.system(f'sudo rm /etc/systemd/system/{service_name}.service')
+        os.system('sudo systemctl daemon-reload')
+        if args.verbose:
+            print("Service removed.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
+
+def start_service():
+    if is_service_installed():
+        subprocess.run(['sudo', 'systemctl', 'start', 'network_logger.service'])
+        if args.verbose:
+            print("Service started.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
+
+def stop_service():
+    if is_service_installed():
+        subprocess.run(['sudo', 'systemctl', 'stop', 'network_logger.service'])
+        if args.verbose:
+            print("Service stopped.")
+    else:
+        if args.verbose:
+            print(f"Service '{service_name}.service' is not installed.")
+
+def read_sensor():
+    temperature = sensor.temperature
+    humidity = sensor.relative_humidity
+    return temperature, humidity
 
 if __name__ == "__main__":
     script_name = sys.argv[0]
@@ -183,6 +231,8 @@ if __name__ == "__main__":
                "- Print the readings to the console with --verbose\n"
                "- Install the script as a service with --install\n"
                "- Uninstall the service with --uninstall\n"
+               "- start the service with --start\n"
+               "- stop the service with --stop\n"
                "- Configure the script with --configure",
         formatter_class=argparse.RawTextHelpFormatter
     )
@@ -192,6 +242,8 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action="store_true", help="Echo the sensor readings to the console.")
     parser.add_argument("--install", action="store_true", help="Install the script as a systemd service.")
     parser.add_argument("--uninstall", action="store_true", help="Uninstall the script as a systemd service.")
+    parser.add_argument("--start", action="store_true", help="Start the service if installed.")
+    parser.add_argument("--stop", action="store_true", help="Stop the service if installed.")
     parser.add_argument("--configure", action="store_true", help="Configure the script settings.")
 
     args = parser.parse_args()
@@ -202,10 +254,13 @@ if __name__ == "__main__":
         config = load_config()
 
         if args.install:
-            script_path = os.path.abspath(__file__)
-            create_service(script_path)
+            create_service()
         elif args.uninstall:
             remove_service()
+        elif args.start:
+            start_service()
+        elif args.stop:
+            stop_service()
         else:
             try:
                 def process_reading():
@@ -235,10 +290,17 @@ if __name__ == "__main__":
 
                 if args.once:
                     process_reading()
-                    print("Completed a single reading.")
+                    if args.verbose:
+                        print("Completed a single reading.")
                 else:
+                    if config['frequency'] < 5:
+                        log_error(f"Frequency too low ({config['frequency']}s). Setting to minimum value of 5s.")
+                        if args.verbose:
+                            print(f"Frequency too low ({config['frequency']}s). Setting to minimum value of 5s.")
+                        config['frequency'] = 5
                     while True:
                         process_reading()
-                        time.sleep(config['frequency'])  # Wait for the configured frequency
+                        time.sleep(config['frequency'])
             except KeyboardInterrupt:
-                print("\nStopping...")
+                if args.verbose:
+                    print("\nStopping...")
