@@ -1,5 +1,42 @@
 #!/bin/bash
 
+# Function to check if MariaDB is installed
+is_mariadb_installed() {
+  if dpkg -l | grep -q mariadb-server; then
+    echo "MariaDB is already installed."
+    return 0
+  else
+    return 1
+  fi
+}
+
+# Function to check if the database and table exist
+is_database_configured() {
+  DB_EXISTS=$(sudo mariadb -u root -e "SHOW DATABASES LIKE 'sensor_data';" | grep "sensor_data" > /dev/null; echo "$?")
+  if [ "$DB_EXISTS" -eq 0 ]; then
+    echo "Database 'sensor_data' already exists."
+    TABLE_EXISTS=$(sudo mariadb -u root -e "USE sensor_data; SHOW TABLES LIKE 'readings';" | grep "readings" > /dev/null; echo "$?")
+    if [ "$TABLE_EXISTS" -eq 0 ]; then
+      echo "Table 'readings' already exists."
+      return 0
+    else
+      return 1
+    fi
+  else
+    return 1
+  fi
+}
+
+# Function to check if the virtual environment exists
+is_venv_exists() {
+  if [ -d ".env" ]; then
+    echo "Python virtual environment already exists."
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Function to prompt the user for MariaDB installation
 prompt_mariadb_installation() {
   read -p "Do you want to install MariaDB on this Raspberry Pi? (y/n): " install_mariadb
