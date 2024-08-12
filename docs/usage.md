@@ -1,8 +1,9 @@
 # Usage
-
+To use the script, the virtual environment must be loaded. A ``run.sh`` bash wrapper is included.
+## Help Message
 ```
 $ ./run.sh --help
-usage: monitor.py [-h] [--once] [--console] [--verbose] [--install] [--uninstall] [--configure]
+usage: monitor.py [-h] [--once] [--console] [--verbose] [--install] [--uninstall] [--start] [--stop] [--configure]
 
 SHT30 Sensor Data Logger
 
@@ -13,6 +14,8 @@ options:
   --verbose    Echo the sensor readings to the console.
   --install    Install the script as a systemd service.
   --uninstall  Uninstall the script as a systemd service.
+  --start      Start the service if installed.
+  --stop       Stop the service if installed.
   --configure  Configure the script settings.
 
 Examples:
@@ -27,5 +30,7 @@ The script allows you to:
 - Print the readings to the console with --verbose
 - Install the script as a service with --install
 - Uninstall the service with --uninstall
+- start the service with --start
+- stop the service with --stop
 - Configure the script with --configure
 ```
