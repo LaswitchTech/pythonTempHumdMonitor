@@ -6,6 +6,7 @@ import sys
 import time
 import json
 import argparse
+import datetime
 import subprocess
 
 # # Activate the virtual environment
@@ -19,6 +20,12 @@ import subprocess
 import adafruit_sht31d
 import board
 import busio
+
+# SMTP Libraries
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.utils import formatdate
 
 # MySQL Libraries
 import mysql.connector
