@@ -100,6 +100,27 @@ def log_data(temperature, humidity, config):
         if connection.is_connected():
             connection.close()
 
+# Function to send an email
+def send_email(subject, body, config):
+    msg = MIMEMultipart()
+    msg['From'] = config['smtp_username']
+    msg['To'] = config['recipient']
+    msg['Subject'] = subject
+    msg['Date'] = formatdate(localtime=True)  # Adding Date header
+
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP(config['smtp_host'], config['smtp_port'])
+        server.starttls()
+        server.login(config['smtp_username'], config['smtp_password'])
+        text = msg.as_string()
+        server.sendmail(config['smtp_username'], config['recipient'], text)
+        server.quit()
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
 def read_sensor():
     temperature = sensor.temperature
     humidity = sensor.relative_humidity
