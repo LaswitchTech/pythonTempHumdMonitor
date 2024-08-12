@@ -35,7 +35,7 @@ default_config = {
     "db_username": "sensor_user",
     "db_password": "",
     "frequency": 60,
-    "smtp_server": "smtp.example.com",
+    "smtp_host": "smtp.example.com",
     "smtp_port": 587,
     "smtp_username": "user@example.com",
     "smtp_password": "",
@@ -66,7 +66,7 @@ def configure():
     config['db_username'] = input(f"Database Username (current: {config['db_username']}): ") or config['db_username']
     config['db_password'] = input("Database Password: ") or config['db_password']
     config['frequency'] = int(input(f"Frequency in seconds (current: {config['frequency']}): ") or config['frequency'])
-    config['smtp_server'] = input(f"SMTP Server (current: {config['smtp_server']}): ") or config['smtp_server']
+    config['smtp_host'] = input(f"SMTP Server (current: {config['smtp_host']}): ") or config['smtp_host']
     config['smtp_port'] = int(input(f"SMTP Port (current: {config['smtp_port']}): ") or config['smtp_port'])
     config['smtp_username'] = input(f"SMTP Username (current: {config['smtp_username']}): ") or config['smtp_username']
     config['smtp_password'] = input("SMTP Password: ") or config['smtp_password']
